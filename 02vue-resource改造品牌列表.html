@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./lib/vue.js"></script>
+    <!-- vue-resource 依赖于vue 所以注意先后次序 -->
+    <!-- this.$http.jsonp -->
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.1"></script>
+    <link rel="stylesheet" href="./lib/bootstrap-3.3.7/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div id="app">
+    <div class="panel panel-primary">
+          <div class="panel-heading">
+                <h3 class="panel-title">添加品牌</h3>
+          </div>
+          <div class="panel-body form-inline">
+                <label>
+                    Name:
+                    <input type="text" v-model="name" class="form-control">
+                </label>
+                <label>
+                    <input type="button" value="添加" @click="add" class="btn btn-primary">
+                </label>
+          </div>
+    </div>
+        <!-- table-striped 隔行变色-->
+        <table class="table table-bordered table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Ctime</th>
+                    <th>Operation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in list" :key="item.id">
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.ctime }}</td>
+                    <td>
+                        <a href="" @click.prevent = "del(item.id)">删除</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>   
+    <script>
+
+        //如果我们通过全局配置了请求的数据接口 跟域名，则在每次单独发送http 请求的时候，请求的url 路径，应该以
+        //相对路径开头，前面不能带 / ，否则不会启用根路径做拼接
+        Vue.http.options.root = 'http://www.liulongbin.top:3005/'
+        // 全局启用emulateJSON选项
+        Vue.http.options.emulateJSON = true;
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                name:'',
+                list:[
+                    {id:1,name:'神车',ctime:new Date()},
+                    {id:2,name:'奔波霸',ctime:new Date()},
+                    {id:3,name:'众泰',ctime:new Date()}
+                ]
+            },
+            created() { //当vm 实例的date 和methods 初始化完毕后,vm 实例会自动执行created 这个生命周期函数
+                    this.getAllList()
+            },
+            methods: {
+                getAllList(){//获取所有的品牌列表
+                //获取所有的品牌列表
+                            /*分析
+                            1 由于已经导入了Vue-resource这个包，所以可以直接通过this.$http来发起数据请求
+                            2 根据接口API文档，获取列表的时候应该发起一个GET请求
+                            3 this.$http.get('url').then(function(result){})
+                            4 当通过then指定回调函数之后，在回调函数中，可以拿到数据服务器返回的result
+                            5 先判断result.status是否等于0 如果等于0，就成功了，把result.message赋值给this.list
+                            */
+                    this.$http.get('api/getprodlist').then(result => {
+                        //注意，通过http 获取的数据都在 result.body中
+                        console.log(result)
+                        var result = result.body
+                        if(result.status === 0){
+                            //成功了
+                            this.list = result.message
+                        }else{
+                            alert("获取数据失败")
+                        }
+                    })
+                },
+                add(){//添加品牌列表到后台服务器
+                //添加品牌列表
+                            /* 分析
+                            1 通过查看数据api接口，发现要发送一个POST请求 this.$http.post
+                            2 this.$http.post() 中接受三个参数:
+                                2.1 第一个参数：要求请求的URL地址
+                                2.2 第二个参数：要提交给服务器的数据，要以对象形式提交给服务器{name:this.name}
+                                2.3 第三个参数：一个配置参数，要以那种表单数据类型提交过去{emulateJSON: true} 普通表单格式，将数据提交给服务器
+                                application/x-www-form-urlencoded
+                            3 在POST方法中，使用.then 来设置成功的回调函数，如果想要拿到成功的结果，需要result.body
+                            */ 
+                    console.log("添加函数执行了")
+                    if(this.name != ''){
+                        this.$http.post('api/addproduct',{name:this.name},/*{emulateJSON:true}*/).then(result => {
+                        console.log("post传送的数据："+this.name)
+                        var result = result.body
+                        if(result.status == 0 ){
+                            this.getAllList()
+                            this.name = ''
+                        }else{
+                            alert("添加失败")
+                        }
+                        })
+                    }
+                    else{
+                        alert("Name不能为空")
+                    }
+                },
+                del(id){//删除品牌
+                    this.$http.get('api/delproduct/'+id).then(result =>{
+                        if(result.body.status == 0){
+                            this.getAllList()
+                        }else{
+                            alert("删除失败")
+                        }
+                    })
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
